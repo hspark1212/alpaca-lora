@@ -37,8 +37,12 @@ class SavePeftModelCallback(TrainerCallback):
         kwargs["model"].save_pretrained(peft_model_path)
 
         pytorch_model_path = os.path.join(checkpoint_folder, "pytorch_model.bin")
-        if os.path.exists(pytorch_model_path):
-            os.remove(pytorch_model_path)
+        try:
+            if os.path.exists(pytorch_model_path):
+                os.remove(pytorch_model_path)
+        except Exception as e:
+            print(f"remove {pytorch_model_path} failed.")
+
         return control
 
 
