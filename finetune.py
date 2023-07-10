@@ -21,8 +21,25 @@ from peft import (
     set_peft_model_state_dict,
 )
 from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
+from transformers.trainer_callback import TrainerCallback
 
 from utils.prompter import Prompter
+
+
+class SavePeftModelCallback(TrainerCallback):
+    def on_save(self, args, state, control, **kwargs):
+        checkpoint_folder = os.path.join(
+            args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{state.global_step}"
+        )       
+
+        peft_model_path = os.path.join(checkpoint_folder, "adapter_model")
+        kwargs["model"].save_pretrained(peft_model_path)
+
+        pytorch_model_path = os.path.join(checkpoint_folder, "pytorch_model.bin")
+        if os.path.exists(pytorch_model_path):
+            os.remove(pytorch_model_path)
+        return control
 
 
 def train(
@@ -257,16 +274,17 @@ def train(
         data_collator=transformers.DataCollatorForSeq2Seq(
             tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
         ),
+        callbacks=[SavePeftModelCallback],
     )
     model.config.use_cache = False
-
+    """
     old_state_dict = model.state_dict
     model.state_dict = (
         lambda self, *_, **__: get_peft_model_state_dict(
             self, old_state_dict()
         )
     ).__get__(model, type(model))
-
+    """
     if torch.__version__ >= "2" and sys.platform != "win32":
         model = torch.compile(model)
 
