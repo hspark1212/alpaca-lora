@@ -15,3 +15,5 @@ todo.txt
 .vscode
 *.sh
 *.out
+*.err
+dataset/
